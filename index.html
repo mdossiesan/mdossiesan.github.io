@@ -5,13 +5,14 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="color-scheme" content="light">
   <meta name="theme-color" content="#ffffff">
-  <meta name="description" content="Dos Santos Jesus: personal tracking system.">
-  <title>Dos Santos Jesus</title>
+  <meta name="description" content="DSJ: the personal tracking system of Dos Santos Jesus. Food, runs and notes in one place.">
+  <title>DSJ · Dos Santos Jesus</title>
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%230f1012'/%3E%3Ctext x='32' y='42' font-family='Arial Narrow,Arial,sans-serif' font-size='26' font-weight='700' text-anchor='middle' fill='%23ffffff'%3EDSJ%3C/text%3E%3C/svg%3E">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,400..900&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap">
   <link rel="stylesheet" href="assets/site.css">
+  <link rel="stylesheet" href="assets/home.css">
 </head>
 <body data-root="./" data-page="home">
   <button class="menu-btn" type="button" aria-expanded="false" aria-controls="menu" aria-label="Open menu">
@@ -20,40 +21,308 @@
   <div class="scrim" aria-hidden="true"></div>
   <nav class="drawer" id="menu" aria-label="Main menu"></nav>
 
-  <div class="page">
-    <header class="bar">
-      <a class="mark" href="./" aria-label="Dos Santos Jesus, home">DSJ</a>
-      <span class="stamp">Wk <b data-week>48</b> · Day <b data-day>327</b></span>
+  <div class="page home">
+    <header class="topbar">
+      <div class="wrap topbar-in">
+        <a class="logo" href="#top" aria-label="DSJ, back to top">DSJ<i aria-hidden="true"></i></a>
+        <nav class="toplinks" aria-label="Sections">
+          <a href="#how">How it works</a>
+          <a href="#features">Features</a>
+          <a href="#today">Today</a>
+          <a href="#faq">FAQ</a>
+        </nav>
+        <a class="btn btn-primary btn-sm" href="tracking/">Start Tracking</a>
+      </div>
+      <div class="progress" aria-hidden="true"><span></span></div>
     </header>
 
-    <main class="hero">
-      <p class="eyebrow"><span class="live-dot" aria-hidden="true"></span><time data-today>Today</time></p>
-      <h1 class="title">
-        <span class="ln"><span>Dos Santos</span></span>
-        <span class="ln"><span class="outline">Jesus</span></span>
-      </h1>
-      <div class="trace-wrap" aria-hidden="true">
-        <svg class="trace" viewBox="0 0 1200 100" preserveAspectRatio="none">
-          <path class="route" pathLength="1" d="M0,78 C90,78 130,44 220,50 S360,92 470,74 S640,18 760,30 S930,88 1030,62 S1150,30 1200,30"/>
-        </svg>
-        <span class="trace-end"></span>
-      </div>
-      <ol class="days" aria-label="This week">
-        <li>Mon</li><li>Tue</li><li>Wed</li><li>Thu</li><li>Fri</li><li>Sat</li><li>Sun</li>
-      </ol>
+    <main id="top">
+      <!-- Hero -->
+      <section class="hero2" aria-labelledby="dsj-title">
+        <div class="wrap hero-grid">
+          <div class="hero-copy">
+            <p class="eyebrow"><span class="live-dot" aria-hidden="true"></span><time data-today>Today</time><span class="sep" aria-hidden="true">/</span><span>Wk <b data-week>48</b></span><span class="sep" aria-hidden="true">/</span><span>Day <b data-day>328</b></span></p>
+            <h1 class="dsj" id="dsj-title" aria-label="DSJ"><span class="ln" aria-hidden="true"><span>DSJ</span></span><span class="dot" aria-hidden="true"></span></h1>
+            <p class="fullname">Dos Santos <span class="outline">Jesus</span></p>
+            <p class="lede">A personal tracking system for food, runs and notes. Log the day, see where the numbers land, and build the habit one entry at a time.</p>
+            <div class="cta-row">
+              <a class="btn btn-primary" href="tracking/">Start Tracking <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a>
+              <a class="btn btn-ghost" href="#how">See how it works</a>
+            </div>
+          </div>
+
+          <div class="hero-visual" aria-hidden="true">
+            <div class="phone">
+              <div class="ph-head"><b>Today</b><span class="chip">Preview</span></div>
+              <div class="ring-box">
+                <svg viewBox="0 0 120 120"><circle class="track" cx="60" cy="60" r="50" pathLength="100"/><circle class="fill" cx="60" cy="60" r="50" pathLength="100"/></svg>
+                <div class="ring-mid"><b>1,240</b><small>kcal left</small></div>
+              </div>
+              <div class="mbar p"><span>Protein</span><span class="t"><i style="--w:61%"></i></span><em>92/150g</em></div>
+              <div class="mbar"><span>Carbs</span><span class="t"><i style="--w:57%"></i></span><em>131/230g</em></div>
+              <div class="mbar"><span>Fat</span><span class="t"><i style="--w:49%"></i></span><em>34/70g</em></div>
+              <div class="ph-run"><b>5.0</b><span>mi easy run<br>42:30 · 8:30 /mi</span></div>
+            </div>
+            <span class="float-tag a"><i></i>Breakfast · 420 kcal</span>
+            <span class="float-tag b"><i></i>Protein on track</span>
+          </div>
+        </div>
+
+        <div class="wrap hero-trace" aria-hidden="true">
+          <div class="trace-wrap">
+            <svg class="trace" viewBox="0 0 1200 100" preserveAspectRatio="none">
+              <path class="route" pathLength="1" d="M0,78 C90,78 130,44 220,50 S360,92 470,74 S640,18 760,30 S930,88 1030,62 S1150,30 1200,30"/>
+            </svg>
+            <span class="trace-end"></span>
+          </div>
+          <ol class="days">
+            <li>Mon</li><li>Tue</li><li>Wed</li><li>Thu</li><li>Fri</li><li>Sat</li><li>Sun</li>
+          </ol>
+        </div>
+      </section>
+
+      <!-- How it works -->
+      <section class="sec" id="how" aria-labelledby="how-h">
+        <div class="wrap">
+          <div class="sec-head" data-reveal>
+            <p class="kicker">How it works</p>
+            <h2 class="h2" id="how-h">Three steps. Every day.</h2>
+            <p class="sec-intro">Tracking only works if it's quick. DSJ keeps it to three moves you can make in under a minute.</p>
+          </div>
+          <ol class="steps">
+            <li class="step" data-reveal style="--d:.05s">
+              <div class="step-n">1</div>
+              <h3>Log it</h3>
+              <p>Snap a meal, scan a label or type it in. Add your run with distance and time.</p>
+            </li>
+            <li class="step" data-reveal style="--d:.15s">
+              <div class="step-n">2</div>
+              <h3>See it</h3>
+              <p>Your day adds up as you go: calories left, protein, carbs, fat and weekly miles.</p>
+            </li>
+            <li class="step" data-reveal style="--d:.25s">
+              <div class="step-n">3</div>
+              <h3>Shape it</h3>
+              <p>Set your own targets, adjust them as you learn, and keep notes on what works.</p>
+            </li>
+          </ol>
+        </div>
+      </section>
+
+      <!-- Feature tabs -->
+      <section class="sec band" id="features" aria-labelledby="feat-h">
+        <div class="wrap">
+          <div class="sec-head" data-reveal>
+            <p class="kicker">Features</p>
+            <h2 class="h2" id="feat-h">Everything in one place</h2>
+            <p class="sec-intro">Pick a tab to see what each part of the system does.</p>
+          </div>
+          <div class="tabs-ui" data-reveal style="--d:.1s">
+            <div class="tablist" role="tablist" aria-label="Features">
+              <button class="tab" role="tab" id="t-food" aria-controls="p-food" aria-selected="true" type="button">Food</button>
+              <button class="tab" role="tab" id="t-runs" aria-controls="p-runs" aria-selected="false" tabindex="-1" type="button">Runs</button>
+              <button class="tab" role="tab" id="t-notes" aria-controls="p-notes" aria-selected="false" tabindex="-1" type="button">Notes</button>
+              <button class="tab" role="tab" id="t-prog" aria-controls="p-prog" aria-selected="false" tabindex="-1" type="button">Progress</button>
+            </div>
+
+            <div class="tabpanel" role="tabpanel" id="p-food" aria-labelledby="t-food" tabindex="0">
+              <div class="tp-copy">
+                <span class="chip">Coming soon</span>
+                <h3>Food log</h3>
+                <p>Point your camera at a plate or a nutrition label and get calories, protein, carbs and fat back, ready to adjust before you save.</p>
+                <ul class="ticks"><li>Photo, barcode or quick search</li><li>Edit servings and numbers</li><li>Breakfast, lunch, dinner and snacks</li></ul>
+                <a class="btn btn-ghost btn-sm" href="tracking/">Open Start Tracking</a>
+              </div>
+              <div class="mock" aria-hidden="true">
+                <div class="mock-h"><span>Lunch</span><span>Example</span></div>
+                <div class="row-card"><div><b>Chicken rice bowl</b><small>1 bowl · estimate</small></div><span class="num">650 kcal</span></div>
+                <div class="row-card"><div><b>Greek yogurt</b><small>170 g · from label</small></div><span class="num">90 kcal</span></div>
+                <div class="row-card"><div><b>Banana</b><small>1 medium</small></div><span class="num">105 kcal</span></div>
+              </div>
+            </div>
+
+            <div class="tabpanel" role="tabpanel" id="p-runs" aria-labelledby="t-runs" tabindex="0" hidden>
+              <div class="tp-copy">
+                <span class="chip">Coming soon</span>
+                <h3>Runs</h3>
+                <p>Log finished runs or plan the next one. Pace and calories burned work themselves out, and planned runs go straight to Google Calendar.</p>
+                <ul class="ticks"><li>Distance, time and pace</li><li>Weekly mileage at a glance</li><li>Add runs to Google Calendar</li></ul>
+                <a class="btn btn-ghost btn-sm" href="tracking/">Open Start Tracking</a>
+              </div>
+              <div class="mock" aria-hidden="true">
+                <div class="mock-h"><span>This week · mi</span><span>Example</span></div>
+                <div class="bars7">
+                  <span><i style="--h:40%"></i>M</span><span><i style="--h:0%"></i>T</span><span><i style="--h:62%"></i>W</span><span><i style="--h:30%"></i>T</span><span><i style="--h:0%"></i>F</span><span class="hi"><i style="--h:95%"></i>S</span><span><i style="--h:35%"></i>S</span>
+                </div>
+                <div class="row-card"><div><b>Long run</b><small>Sat · 7:30 AM</small></div><span class="num">10.2 mi</span></div>
+              </div>
+            </div>
+
+            <div class="tabpanel" role="tabpanel" id="p-notes" aria-labelledby="t-notes" tabindex="0" hidden>
+              <div class="tp-copy">
+                <span class="chip next">Next up</span>
+                <h3>Personal notes</h3>
+                <p>A private place for plans, thoughts and what you learned this week. It already has its own page in the menu.</p>
+                <ul class="ticks"><li>Quick notes in seconds</li><li>Dated automatically</li><li>Private to you</li></ul>
+                <a class="btn btn-ghost btn-sm" href="notes/">Open Personal Notes</a>
+              </div>
+              <div class="mock" aria-hidden="true">
+                <div class="mock-h"><span>Notes</span><span>Example</span></div>
+                <div class="note-card"><b>Week plan</b><p>Three runs, one long. Protein at every meal.</p><time>Mon · 7:02 AM</time></div>
+                <div class="note-card"><b>What worked</b><p>Prepping lunches on Sunday saved the week.</p><time>Sun · 9:40 PM</time></div>
+              </div>
+            </div>
+
+            <div class="tabpanel" role="tabpanel" id="p-prog" aria-labelledby="t-prog" tabindex="0" hidden>
+              <div class="tp-copy">
+                <span class="chip">Coming soon</span>
+                <h3>Progress</h3>
+                <p>See the streaks and trends that matter: days logged, calories against your goal, protein hit rate and miles by week.</p>
+                <ul class="ticks"><li>Streaks and logging calendar</li><li>7 and 30 day trends</li><li>Your macro split</li></ul>
+                <a class="btn btn-ghost btn-sm" href="tracking/">Open Start Tracking</a>
+              </div>
+              <div class="mock" aria-hidden="true">
+                <div class="mock-h"><span>Last 5 weeks</span><span>Example</span></div>
+                <div class="heat">
+                  <i class="l1"></i><i class="l2"></i><i class="l3"></i><i></i><i class="l2"></i><i class="l3"></i><i class="l1"></i>
+                  <i class="l2"></i><i class="l3"></i><i class="l2"></i><i class="l1"></i><i></i><i class="l3"></i><i class="l2"></i>
+                  <i class="l3"></i><i class="l3"></i><i class="l1"></i><i class="l2"></i><i class="l3"></i><i class="l2"></i><i></i>
+                  <i class="l2"></i><i class="l1"></i><i class="l3"></i><i class="l3"></i><i class="l2"></i><i class="l3"></i><i class="l1"></i>
+                  <i class="l3"></i><i class="l2"></i><i class="l3"></i><i class="l1"></i><i></i><i></i><i></i>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- What's being built -->
+      <section class="sec" id="build" aria-labelledby="build-h">
+        <div class="wrap">
+          <div class="sec-head" data-reveal>
+            <p class="kicker">Build log</p>
+            <h2 class="h2" id="build-h">What's being built</h2>
+            <p class="sec-intro">DSJ grows one piece at a time. Here's where each part stands.</p>
+          </div>
+          <div class="grid6">
+            <article class="fcard" data-reveal style="--d:0s">
+              <div class="fcard-top"><span class="ficon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 10.5 12 3l9 7.5V21H3z"/><path d="M9 21v-7h6v7"/></svg></span><span class="chip live">Live</span></div>
+              <h3>Home &amp; menu</h3><p>This page and the side menu that ties every section together.</p>
+            </article>
+            <article class="fcard" data-reveal style="--d:.08s">
+              <div class="fcard-top"><span class="ficon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><path d="M14 3v6h6M8 13h8M8 17h5"/></svg></span><span class="chip next">Next</span></div>
+              <h3>Personal notes</h3><p>Write, date and keep your own notes.</p>
+              <a class="stretch" href="notes/" aria-label="Open Personal Notes"></a>
+            </article>
+            <article class="fcard" data-reveal style="--d:.16s">
+              <div class="fcard-top"><span class="ficon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 2v7c0 1.1.9 2 2 2h2a2 2 0 0 0 2-2V2M6 2v20M21 15V2a5 5 0 0 0-5 5v6c0 1.1.9 2 2 2h3zm0 0v7"/></svg></span><span class="chip">Planned</span></div>
+              <h3>Food log</h3><p>Meals by day with calories, protein, carbs and fat.</p>
+            </article>
+            <article class="fcard" data-reveal style="--d:0s">
+              <div class="fcard-top"><span class="ficon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg></span><span class="chip">Planned</span></div>
+              <h3>Photo &amp; barcode scan</h3><p>Snap a plate or a label, or scan a barcode, and check the numbers.</p>
+            </article>
+            <article class="fcard" data-reveal style="--d:.08s">
+              <div class="fcard-top"><span class="ficon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg></span><span class="chip">Planned</span></div>
+              <h3>Runs</h3><p>Distance, time and pace, with weekly mileage.</p>
+            </article>
+            <article class="fcard" data-reveal style="--d:.16s">
+              <div class="fcard-top"><span class="ficon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg></span><span class="chip">Planned</span></div>
+              <h3>Google Calendar</h3><p>Send planned runs to your calendar with one tap.</p>
+            </article>
+          </div>
+        </div>
+      </section>
+
+      <!-- Today numbers -->
+      <section class="sec band" id="today" aria-labelledby="today-h">
+        <div class="wrap">
+          <div class="sec-head" data-reveal>
+            <p class="kicker">Today in numbers</p>
+            <h2 class="h2" id="today-h">Every day counts</h2>
+            <p class="sec-intro">Where you are in <span data-year>2026</span>, updated every time you open the page.</p>
+          </div>
+          <div class="stats" data-reveal style="--d:.1s">
+            <div class="stat"><div class="stat-v" data-week>48</div><p class="stat-l">Week of the year</p></div>
+            <div class="stat"><div class="stat-v" data-dayn>328</div><p class="stat-l">Day of the year</p></div>
+            <div class="stat"><div class="stat-v" data-left>37</div><p class="stat-l">Days left this year</p></div>
+            <div class="stat"><div class="stat-v"><span data-pct>90</span><small>%</small></div><p class="stat-l">Of the year done</p></div>
+          </div>
+          <div class="yearbar" data-reveal style="--d:.2s" aria-hidden="true">
+            <div class="yearbar-t"><i></i></div>
+            <div class="yearbar-l"><span>Jan 1</span><span>Dec 31</span></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- FAQ -->
+      <section class="sec" id="faq" aria-labelledby="faq-h">
+        <div class="wrap">
+          <div class="sec-head" data-reveal>
+            <p class="kicker">Questions</p>
+            <h2 class="h2" id="faq-h">Good to know</h2>
+          </div>
+          <div class="faq" data-reveal style="--d:.1s">
+            <details name="faq">
+              <summary>What is DSJ?<span class="pm" aria-hidden="true"></span></summary>
+              <p class="ans">DSJ is the personal site of Dos Santos Jesus and the home of a tracking system for food, runs and notes.</p>
+            </details>
+            <details name="faq">
+              <summary>What can I track right now?<span class="pm" aria-hidden="true"></span></summary>
+              <p class="ans">The pages are being built step by step. Start Tracking and Personal Notes are already in the menu, and the build log above shows what comes next.</p>
+            </details>
+            <details name="faq">
+              <summary>Will it scan food with the camera?<span class="pm" aria-hidden="true"></span></summary>
+              <p class="ans">That's the plan: snap a meal or a nutrition label, or scan a barcode, and get calories, protein, carbs and fat that you can adjust before saving.</p>
+            </details>
+            <details name="faq">
+              <summary>Does the site store anything about me?<span class="pm" aria-hidden="true"></span></summary>
+              <p class="ans">Not yet. The site doesn't collect or save anything right now.</p>
+            </details>
+            <details name="faq">
+              <summary>Does it cost anything?<span class="pm" aria-hidden="true"></span></summary>
+              <p class="ans">No. The site is free to visit and is hosted on GitHub Pages.</p>
+            </details>
+          </div>
+        </div>
+      </section>
+
+      <!-- Final call to action -->
+      <section class="finale" aria-labelledby="fin-h">
+        <div class="wrap">
+          <div class="finale-box" data-reveal>
+            <div>
+              <p class="kicker">Tracking System</p>
+              <h2 class="h2" id="fin-h">Start tracking today.</h2>
+            </div>
+            <a class="btn btn-primary" href="tracking/">Start Tracking <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a>
+          </div>
+        </div>
+      </section>
     </main>
 
-    <footer class="foot">
-      <a class="cta" href="tracking/">
-        <span class="cta-text">
-          <span class="cta-kicker">Enter</span>
-          <span class="cta-title">Tracking System</span>
-        </span>
-        <span class="cta-arrow" aria-hidden="true"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span>
-      </a>
-      <p class="fine"><span>© 2026 Dos Santos Jesus</span><span>mdossiesan.github.io</span></p>
+    <footer class="site-foot">
+      <div class="wrap">
+        <div class="foot-grid">
+          <div class="foot-brand"><b>DSJ</b><p>Dos Santos Jesus. A personal tracking system for food, runs and notes.</p></div>
+          <div class="foot-col">
+            <h4>Track</h4>
+            <ul><li><a href="tracking/">Start Tracking</a></li><li class="soon">Food Log · soon</li><li class="soon">Runs · soon</li></ul>
+          </div>
+          <div class="foot-col">
+            <h4>Personal</h4>
+            <ul><li><a href="notes/">Personal Notes</a></li></ul>
+          </div>
+          <div class="foot-col">
+            <h4>This page</h4>
+            <ul><li><a href="#how">How it works</a></li><li><a href="#features">Features</a></li><li><a href="#today">Today</a></li><li><a href="#faq">FAQ</a></li></ul>
+          </div>
+        </div>
+        <div class="foot-bottom"><span>© 2026 Dos Santos Jesus</span><a href="#top">Back to top ↑</a></div>
+      </div>
     </footer>
   </div>
   <script src="assets/site.js"></script>
+  <script src="assets/home.js"></script>
 </body>
 </html>
