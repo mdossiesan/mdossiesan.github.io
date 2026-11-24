@@ -5,13 +5,14 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="color-scheme" content="light">
   <meta name="theme-color" content="#ffffff">
-  <meta name="description" content="Start tracking: Dos Santos Jesus tracking system.">
-  <title>Start Tracking · Dos Santos Jesus</title>
+  <meta name="description" content="DSJ tracker: log meals with AI photo scanning, log and schedule exercise, and browse your days on a calendar.">
+  <title>Start Tracking · DSJ</title>
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%230f1012'/%3E%3Ctext x='32' y='42' font-family='Arial Narrow,Arial,sans-serif' font-size='26' font-weight='700' text-anchor='middle' fill='%23ffffff'%3EDSJ%3C/text%3E%3C/svg%3E">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,400..900&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,400..900&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap">
   <link rel="stylesheet" href="../assets/site.css">
+  <link rel="stylesheet" href="../assets/tracker.css">
 </head>
 <body data-root="../" data-page="tracking">
   <button class="menu-btn" type="button" aria-expanded="false" aria-controls="menu" aria-label="Open menu">
@@ -20,17 +21,58 @@
   <div class="scrim" aria-hidden="true"></div>
   <nav class="drawer" id="menu" aria-label="Main menu"></nav>
 
-  <div class="page">
-    <header class="bar">
-      <a class="mark" href="../" aria-label="Dos Santos Jesus, home">DSJ</a>
-      <span class="stamp">Wk <b data-week>48</b> · Day <b data-day>327</b></span>
-    </header>
+  <div class="page tracker">
+    <div class="tk-bar">
+      <header class="bar">
+        <div class="tk-title"><a class="mark" href="../" aria-label="DSJ, home">DSJ</a><span>Tracking</span></div>
+        <button class="icon-btn" id="openSettings" type="button" aria-label="Settings and goals">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 6h10M18 6h2M4 12h4M12 12h8M4 18h12M20 18h0"/><circle cx="16" cy="6" r="2"/><circle cx="10" cy="12" r="2"/><circle cx="18" cy="18" r="2"/></svg>
+        </button>
+      </header>
+    </div>
 
-    <main class="blank">
-      <p class="eyebrow"><span class="live-dot" aria-hidden="true"></span><time data-today>Today</time></p>
-      <h1 class="blank-title">Start Tracking</h1>
+    <main class="tk">
+      <div class="datebar">
+        <button class="round" id="prevDay" type="button" aria-label="Previous day"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 18l-6-6 6-6"/></svg></button>
+        <div class="grow">
+          <h1 id="dayTitle">Today</h1>
+          <div class="sub" id="daySub"></div>
+        </div>
+        <button class="round" id="nextDay" type="button" aria-label="Next day"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 18l6-6-6-6"/></svg></button>
+      </div>
+
+      <div class="cal-toggle">
+        <div class="seg" role="group" aria-label="Calendar view">
+          <button type="button" id="viewWeek" aria-pressed="true">Week</button>
+          <button type="button" id="viewMonth" aria-pressed="false">Month</button>
+        </div>
+        <button class="btn btn-ghost btn-sm" id="goToday" type="button" hidden>Back to today</button>
+      </div>
+      <div id="calendar"></div>
+
+      <div class="layout">
+        <div class="card-col" id="cardCol"></div>
+        <div class="log-col" id="logCol"></div>
+      </div>
     </main>
   </div>
+
+  <button class="fab" id="fab" type="button" aria-label="Add a meal or exercise" aria-haspopup="dialog" aria-expanded="false">
+    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
+  </button>
+
+  <dialog class="sheet" id="sheet" aria-labelledby="sheetTitle">
+    <div class="sheet-in">
+      <div class="sheet-head">
+        <h2 id="sheetTitle">Add</h2>
+        <button class="icon-btn" id="sheetClose" type="button" aria-label="Close"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M18 6L6 18M6 6l12 12"/></svg></button>
+      </div>
+      <div class="sheet-body" id="sheetBody"></div>
+    </div>
+  </dialog>
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+
   <script src="../assets/site.js"></script>
+  <script type="module" src="../assets/tracker.js"></script>
 </body>
 </html>

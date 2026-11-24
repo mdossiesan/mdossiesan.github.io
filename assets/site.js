@@ -8,9 +8,8 @@
   /* ---------- menu entries (edit here; every page uses this list) ---------- */
   const MENU = [
     { key: 'home', title: 'Home', sub: 'Front page', href: '' },
-    { key: 'tracking', title: 'Start Tracking', sub: 'Open a new tracking page', href: 'tracking/', primary: true },
-    { key: 'food', title: 'Food Log', sub: 'Meals, calories and macros', soon: true },
-    { key: 'runs', title: 'Runs', sub: 'Distance, pace and plans', soon: true },
+    { key: 'tracking', title: 'Start Tracking', sub: 'Meals, exercise and calendar', href: 'tracking/', primary: true },
+    { key: 'progress', title: 'Progress', sub: 'Streaks and trends', soon: true },
     { key: 'about', title: 'About', sub: "Who's behind this", soon: true },
     { group: 'Personal' },
     { key: 'notes', title: 'Personal Notes', sub: 'Thoughts, plans and reminders', href: 'notes/', notes: true }
