@@ -1,5 +1,7 @@
 // DSJ tracker: meals (with AI photo scanning), exercise (done or scheduled), calendar, goals.
-// Everything is saved in this browser (localStorage). The AI key is stored separately and never exported.
+// Saved in this browser (localStorage) and, when signed in, synced to Supabase through cloud.js.
+// A browser-only Anthropic key (used when sign-in isn't set up) is stored separately and never exported.
+import * as cloud from './cloud.js';
 
 /* ================= helpers ================= */
 const $ = (s, el = document) => el.querySelector(s);
@@ -29,7 +31,9 @@ const ICONS = {
   left: '<path d="M15 18l-6-6 6-6"/>',
   right: '<path d="M9 18l6-6-6-6"/>',
   key: '<circle cx="7.5" cy="15.5" r="4.5"/><path d="M10.7 12.3L21 2M16 7l3 3M18 5l2 2"/>',
-  out: '<path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6M15 3h6v6M10 14L21 3"/>'
+  out: '<path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6M15 3h6v6M10 14L21 3"/>',
+  user: '<circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/>',
+  sync: '<path d="M21 12a9 9 0 0 1-15.5 6.2L3 16M3 12a9 9 0 0 1 15.5-6.2L21 8M21 3v5h-5M3 21v-5h5"/>'
 };
 function icon(name, size = 20) {
   const el = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
@@ -81,7 +85,7 @@ const MODEL = 'claude-opus-5-5';
 const KM_PER_MI = 1.609344;
 const SRC = { label: 'From label', product: 'Product data', estimate: 'AI estimate', manual: '' };
 
-const S = { days: {}, settings: { ...DEFAULTS }, sel: todayISO(), view: 'week', month: todayISO().slice(0, 7) };
+const S = { days: {}, settings: { ...DEFAULTS }, settingsU: 0, sel: todayISO(), view: 'week', month: todayISO().slice(0, 7), user: null, recovery: false, sync: 'local', lastSync: 0, synced: {}, pending: new Set() };
 
 function normMeal(x) {
   x = x || {};
@@ -89,7 +93,7 @@ function normMeal(x) {
     id: String(x.id || uid()).slice(0, 40), meal: MEAL_KEYS.includes(x.meal) ? x.meal : 'snack',
     name: str(x.name, 'Food', 80), serving: str(x.serving, '', 60), qty: x.qty == null ? 1 : num(x.qty),
     cal: num(x.cal), p: num(x.p), c: num(x.c), f: num(x.f), fiber: num(x.fiber), sugar: num(x.sugar), sodium: num(x.sodium),
-    source: x.source in SRC ? x.source : 'manual', t: num(x.t) || Date.now()
+    source: x.source in SRC ? x.source : 'manual', note: str(x.note, '', 200), t: num(x.t) || Date.now()
   };
 }
 function normEx(x) {
@@ -102,7 +106,8 @@ function normEx(x) {
 }
 const normDay = v => ({
   meals: Array.isArray(v && v.meals) ? v.meals.filter(o => o && typeof o === 'object').map(normMeal) : [],
-  exercises: Array.isArray(v && v.exercises) ? v.exercises.filter(o => o && typeof o === 'object').map(normEx) : []
+  exercises: Array.isArray(v && v.exercises) ? v.exercises.filter(o => o && typeof o === 'object').map(normEx) : [],
+  u: num(v && v.u)
 });
 function cleanSettings(o) {
   const out = {};
@@ -113,26 +118,122 @@ function cleanSettings(o) {
   if (typeof o.addBurn === 'boolean') out.addBurn = o.addBurn;
   return out;
 }
-const ensureDay = d => (S.days[d] ||= { meals: [], exercises: [] });
+const ensureDay = d => (S.days[d] ||= { meals: [], exercises: [], u: 0 });
 
+const dayJSON = d => JSON.stringify([d.meals, d.exercises]);
+let settingsJSON = '';
 function load() {
   try {
     const o = JSON.parse(localStorage.getItem(LS) || 'null');
     if (o && typeof o === 'object') {
-      for (const [k, v] of Object.entries(o.days || {})) if (isISO(k)) S.days[k] = normDay(v);
+      for (const [k, v] of Object.entries(o.days || {})) if (isISO(k)) { S.days[k] = normDay(v); S.synced[k] = dayJSON(S.days[k]); }
       S.settings = { ...DEFAULTS, ...cleanSettings(o.settings) };
+      S.settingsU = num(o.settingsU);
     }
     const v = localStorage.getItem(LS_VIEW);
     if (v === 'month' || v === 'week') S.view = v;
   } catch (e) { /* storage unavailable: start empty */ }
+  settingsJSON = JSON.stringify(S.settings);
 }
-function save() {
-  const days = {};
-  for (const [k, d] of Object.entries(S.days)) if (d.meals.length || d.exercises.length) days[k] = d;
-  try { localStorage.setItem(LS, JSON.stringify({ v: 1, days, settings: S.settings })); return true; }
+function persistLocal() {
+  try { localStorage.setItem(LS, JSON.stringify({ v: 2, days: S.days, settings: S.settings, settingsU: S.settingsU })); return true; }
   catch (e) { toast("Couldn't save on this device. Storage may be full or blocked."); return false; }
 }
+// Save after any change: stamp the days (and settings) that changed, keep them locally, and queue them for sync.
+function save() {
+  const now = Date.now();
+  for (const k of new Set([...Object.keys(S.days), ...Object.keys(S.synced)])) {
+    const d = S.days[k] || (S.days[k] = { meals: [], exercises: [], u: 0 });
+    const j = dayJSON(d);
+    if (S.synced[k] !== j) { d.u = now; S.synced[k] = j; S.pending.add('day:' + k); }
+  }
+  const sj = JSON.stringify(S.settings);
+  if (sj !== settingsJSON) { settingsJSON = sj; S.settingsU = now; S.pending.add('settings:main'); }
+  const ok = persistLocal();
+  schedulePush();
+  return ok;
+}
+
+/* ================= sync ================= */
+let pushT = null, pushing = false, syncing = null;
+function setSync(state) { S.sync = state; renderAccountBtn(); if (dlg.open && sheetBuild === accountBuild) refreshSheet(); }
+function schedulePush() {
+  if (!S.user || !S.pending.size) return;
+  clearTimeout(pushT); pushT = setTimeout(flushPush, 800); setSync('saving');
+}
+async function flushPush() {
+  if (!S.user) return;
+  if (pushing) { schedulePush(); return; }
+  if (!S.pending.size) { setSync('synced'); return; }
+  const keys = [...S.pending]; S.pending.clear(); pushing = true;
+  const rows = keys.map(k => {
+    const i = k.indexOf(':'), kind = k.slice(0, i), key = k.slice(i + 1);
+    return kind === 'day' ? { kind, key, data: S.days[key] || { meals: [], exercises: [], u: Date.now() } } : { kind: 'settings', key: 'main', data: { ...S.settings, u: S.settingsU } };
+  });
+  try { await cloud.push(rows); S.lastSync = Date.now(); setSync('synced'); }
+  catch (e) { keys.forEach(k => S.pending.add(k)); setSync('error'); }
+  pushing = false;
+  if (S.pending.size && S.sync !== 'error') schedulePush();
+}
+// Pull everything from the account, keep whichever copy of each day is newer, then send up what the server lacks.
+function syncNow() {
+  if (!S.user) return Promise.resolve();
+  if (syncing) return syncing;
+  syncing = (async () => {
+    setSync('saving');
+    try {
+      const rows = await cloud.pull(['day', 'settings']);
+      const remote = new Map(); let changed = false, remoteSettings = false;
+      for (const r of rows) {
+        if (r.kind === 'day' && isISO(r.key)) {
+          const rd = normDay(r.data); remote.set(r.key, rd.u);
+          const ld = S.days[r.key];
+          if (!ld || rd.u > (ld.u || 0)) { S.days[r.key] = rd; S.synced[r.key] = dayJSON(rd); changed = true; }
+        } else if (r.kind === 'settings' && r.key === 'main') {
+          remoteSettings = true;
+          const ru = num(r.data && r.data.u);
+          if (ru > S.settingsU) { S.settings = { ...DEFAULTS, ...cleanSettings(r.data) }; S.settingsU = ru; settingsJSON = JSON.stringify(S.settings); changed = true; }
+          else if (ru < S.settingsU) S.pending.add('settings:main');
+        }
+      }
+      if (!remoteSettings && S.settingsU) S.pending.add('settings:main');
+      for (const [k, d] of Object.entries(S.days)) {
+        const ru = remote.get(k);
+        if ((ru === undefined && (d.meals.length || d.exercises.length)) || (ru !== undefined && (d.u || 0) > ru)) {
+          if (!d.u) d.u = Date.now();
+          S.pending.add('day:' + k);
+        }
+      }
+      persistLocal();
+      if (changed) render();
+      S.lastSync = Date.now();
+      if (S.pending.size) await flushPush(); else setSync('synced');
+    } catch (e) { setSync('error'); }
+    syncing = null;
+  })();
+  return syncing;
+}
+async function initCloud() {
+  if (!cloud.configured) { setSync('local'); return; }
+  setSync('signedout');
+  try {
+    await cloud.onAuthChange((event, user) => {
+      const was = S.user && S.user.id;
+      S.user = user;
+      if (event === 'PASSWORD_RECOVERY') { S.recovery = true; openAccount(); }
+      if (user && user.id !== was) syncNow();
+      if (!user) { S.pending.clear(); setSync('signedout'); }
+      renderLog();
+      if (dlg.open && sheetBuild === accountBuild) refreshSheet();
+    });
+    const u = await cloud.currentUser();
+    if (u && (!S.user || S.user.id !== u.id)) { S.user = u; renderLog(); syncNow(); }
+  } catch (e) { setSync('error'); }
+}
 const getKey = () => { try { return localStorage.getItem(LS_KEY) || ''; } catch (e) { return ''; } };
+const aiViaCloud = () => cloud.configured && !!S.user;
+const hasAI = () => aiViaCloud() || (!cloud.configured && !!getKey());
+const openAISetup = () => (cloud.configured ? openAccount() : openSettings('ai'));
 const setKey = k => { try { if (k) localStorage.setItem(LS_KEY, k); else localStorage.removeItem(LS_KEY); return true; } catch (e) { return false; } };
 
 /* ================= units & totals ================= */
@@ -304,9 +405,13 @@ function svgRing(pct) {
 
 function renderLog() {
   const d = S.days[S.sel] || { meals: [], exercises: [] }, t = totals(S.sel);
-  const setup = !getKey() ? h('div', { class: 'setup-card' },
-    h('p', {}, h('b', {}, 'Turn on AI food scanning. '), 'Add your Anthropic API key once and you can snap a meal or label to fill in the numbers.'),
-    h('button', { class: 'btn btn-primary btn-sm', type: 'button', onclick: () => openSettings('ai') }, icon('key', 16), 'Set up')) : null;
+  const setup = hasAI() ? null : cloud.configured
+    ? h('div', { class: 'setup-card' },
+        h('p', {}, h('b', {}, 'Sign in to sync and scan. '), 'Your log syncs across your devices and AI food scanning turns on.'),
+        h('button', { class: 'btn btn-primary btn-sm', type: 'button', onclick: () => openAccount() }, icon('user', 16), 'Sign in'))
+    : h('div', { class: 'setup-card' },
+        h('p', {}, h('b', {}, 'Turn on AI food scanning. '), 'Add your Anthropic API key once and you can snap a meal or label to fill in the numbers.'),
+        h('button', { class: 'btn btn-primary btn-sm', type: 'button', onclick: () => openSettings('ai') }, icon('key', 16), 'Set up'));
 
   const foodSec = h('section', { class: 'log-sec', 'aria-label': 'Food' },
     h('div', { class: 'log-h' }, h('h2', {}, 'Food'), h('span', { class: 'k' }, t.n ? `${nf0.format(t.cal)} kcal` : ''),
@@ -334,7 +439,7 @@ function foodRow(m) {
   const q = m.qty;
   const sub = [(q !== 1 ? nf2.format(q) + ' × ' : '') + (m.serving || '1 serving'), SRC[m.source]].filter(Boolean).join(' · ');
   return h('li', {}, h('button', { class: 'item', type: 'button', onclick: () => openEditMeal(S.sel, m.id) },
-    h('span', { class: 'item-main' }, h('span', { class: 'item-name' }, m.name), h('span', { class: 'item-sub' }, sub)),
+    h('span', { class: 'item-main' }, h('span', { class: 'item-name' }, m.name), h('span', { class: 'item-sub' }, sub), m.note ? h('span', { class: 'entry-note' }, m.note) : null),
     h('span', { class: 'item-num' }, h('span', { class: 'item-k' }, nf0.format(m.cal * q), h('small', {}, ' kcal')),
       h('span', { class: 'mm', 'aria-label': `Protein ${nf0.format(m.p * q)} g, carbs ${nf0.format(m.c * q)} g, fat ${nf0.format(m.f * q)} g` },
         h('span', { class: 'c-p' }, 'P' + nf0.format(m.p * q)), h('span', { class: 'c-c' }, 'C' + nf0.format(m.c * q)), h('span', { class: 'c-f' }, 'F' + nf0.format(m.f * q))))));
@@ -346,7 +451,8 @@ function exCard(x, date) {
       h('span', { class: 'ex-big' }, hd.big, hd.unit ? h('small', {}, ' ' + hd.unit) : null),
       h('span', { class: 'ex-info' },
         h('span', { class: 'ex-t' }, [exType(x.type).label, x.time ? fmtTime(x.time) : ''].filter(Boolean).join(' · '), sch ? h('span', { class: 'chip blue' }, 'Scheduled') : h('span', { class: 'chip' }, 'Done')),
-        h('span', { class: 'ex-s' }, exStats(x) || 'Tap to add time and distance'))),
+        h('span', { class: 'ex-s' }, exStats(x) || 'Tap to add time and distance'),
+        x.notes ? h('span', { class: 'entry-note' }, x.notes) : null)),
     h('div', { class: 'ex-actions' },
       sch ? h('button', { class: 'btn btn-ghost btn-sm', type: 'button', onclick: () => openExercise({ date, id: x.id }, 'done') }, icon('check', 15), 'Mark done') : null,
       h('a', { class: 'gcal', href: gcalLink(x, date), target: '_blank', rel: 'noopener' }, icon('cal', 15), 'Add to Google Calendar')));
@@ -380,21 +486,21 @@ function seg(options, value, onPick, label) {
 let presetMeal = null;
 function openAddMenu(meal) {
   presetMeal = meal || null;
-  const hasKey = !!getKey();
+  const hasKey = hasAI();
   const opt = (ic, title, sub, onclick, primary) => h('button', { class: 'opt' + (primary ? ' primary' : ''), type: 'button', onclick },
     h('span', { class: 'o-ic' }, icon(ic)), h('span', { class: 'o-t' }, title), h('span', { class: 'o-sub' }, sub));
   const fileOpt = (ic, title, sub, capture, primary) => hasKey
     ? h('label', { class: 'opt' + (primary ? ' primary' : '') },
         h('span', { class: 'o-ic' }, icon(ic)), h('span', { class: 'o-t' }, title), h('span', { class: 'o-sub' }, sub),
         h('input', { class: 'vh', type: 'file', accept: 'image/*', capture: capture ? 'environment' : null, onchange: e => { const f = e.target.files && e.target.files[0]; e.target.value = ''; if (f) openFood({ mode: 'scan', file: f }); } }))
-    : h('button', { class: 'opt' + (primary ? ' primary' : ''), type: 'button', onclick: () => openSettings('ai') },
-        h('span', { class: 'o-ic' }, icon(ic)), h('span', { class: 'o-t' }, title), h('span', { class: 'o-sub' }, 'Set up AI scanning first'), h('span', { class: 'chip o-lock' }, 'Setup'));
+    : h('button', { class: 'opt' + (primary ? ' primary' : ''), type: 'button', onclick: openAISetup },
+        h('span', { class: 'o-ic' }, icon(ic)), h('span', { class: 'o-t' }, title), h('span', { class: 'o-sub' }, cloud.configured ? 'Sign in to use AI scanning' : 'Set up AI scanning first'), h('span', { class: 'chip o-lock' }, cloud.configured ? 'Sign in' : 'Setup'));
   openSheet('Add', body => put(body,
     h('p', { class: 'grp-l' }, presetMeal ? `Log ${mealLabel(presetMeal).toLowerCase()}` : 'Log a meal'),
     h('div', { class: 'opts' },
       fileOpt('camera', 'Scan with camera', 'Snap your plate or a nutrition label', true, true),
       fileOpt('image', 'Upload a photo', 'Pick a food photo you already took', false, false),
-      hasKey ? opt('pencil', 'Describe it', 'Type what you ate and AI estimates it', () => openFood({ mode: 'describe' })) : opt('pencil', 'Describe it', 'Set up AI first', () => openSettings('ai')),
+      hasKey ? opt('pencil', 'Describe it', 'Type what you ate and AI estimates it', () => openFood({ mode: 'describe' })) : opt('pencil', 'Describe it', cloud.configured ? 'Sign in to use AI' : 'Set up AI first', openAISetup),
       opt('list', 'Enter manually', 'Type the numbers yourself', () => openFood({ mode: 'manual' }))),
     h('p', { class: 'grp-l' }, 'Log exercise'),
     h('div', { class: 'opts' },
@@ -405,7 +511,7 @@ function openAddMenu(meal) {
 
 /* ================= food flow ================= */
 let F = null;
-const blankItem = () => ({ id: uid(), name: '', serving: '1 serving', qty: 1, cal: 0, p: 0, c: 0, f: 0, fiber: 0, sugar: 0, sodium: 0, source: 'manual', include: true });
+const blankItem = () => ({ id: uid(), name: '', serving: '1 serving', qty: 1, cal: 0, p: 0, c: 0, f: 0, fiber: 0, sugar: 0, sodium: 0, source: 'manual', note: '', include: true });
 function openFood({ mode, file }) {
   if (F && F.photoURL) URL.revokeObjectURL(F.photoURL);
   F = { mode, stage: mode === 'manual' ? 'review' : mode, meal: presetMeal || mealForNow(), date: S.sel, items: mode === 'manual' ? [blankItem()] : [], note: '', busy: false, err: '', hint: '', text: '', photoURL: null, blob: null, ctl: null, started: 0, timer: null };
@@ -502,6 +608,7 @@ function itemEditor(it, opts) {
     h('div', { class: 'grid4' }, numF('cal', 'Calories', 'kcal', 1), numF('p', 'Protein', 'g'), numF('c', 'Carbs', 'g'), numF('f', 'Fat', 'g')),
     h('details', { class: 'ed-more' }, h('summary', {}, 'Fiber, sugar & sodium'),
       h('div', { class: 'grid3' }, numF('fiber', 'Fiber', 'g'), numF('sugar', 'Sugar', 'g'), numF('sodium', 'Sodium', 'mg', 1))),
+    h('label', { class: 'fld' }, 'Note (optional)', h('input', { type: 'text', maxlength: 200, value: it.note || '', placeholder: 'e.g. ate half, felt bloated after', oninput: e => { it.note = e.target.value; } })),
     total);
   upd();
   return card;
@@ -606,13 +713,21 @@ async function analyzeFood({ key, blob, text, hint, signal }) {
   const txt = res.content.filter(b => b.type === 'text').map(b => b.text).join('');
   let data;
   try { data = JSON.parse(txt); } catch (e) { throw { code: 'parse', message: "The AI's answer couldn't be read. Try again." }; }
+  return normAI(data);
+}
+function normAI(data) {
   const items = (Array.isArray(data && data.items) ? data.items : []).filter(x => x && typeof x === 'object').slice(0, 20).map(x => ({
     id: uid(), name: str(x.name, 'Food', 80), serving: str(x.serving, '1 serving', 60), qty: 1,
     cal: Math.round(num(x.calories)), p: r1(num(x.protein_g)), c: r1(num(x.carbs_g)), f: r1(num(x.fat_g)),
     fiber: r1(num(x.fiber_g)), sugar: r1(num(x.sugar_g)), sodium: Math.round(num(x.sodium_mg)),
-    source: ['label', 'product', 'estimate'].includes(x.source) ? x.source : 'estimate', include: true
+    source: ['label', 'product', 'estimate'].includes(x.source) ? x.source : 'estimate', note: '', include: true
   }));
   return { items, note: typeof data.note === 'string' ? data.note.slice(0, 300) : '' };
+}
+async function analyzeViaCloud({ blob, text, hint, signal }) {
+  const body = { text: blob ? '' : text, hint };
+  if (blob) { body.image = await toBase64(blob); body.media_type = blob.type || 'image/jpeg'; }
+  return normAI(await cloud.scanFood(body, signal));
 }
 async function checkKey(key) {
   let A;
@@ -626,14 +741,15 @@ async function checkKey(key) {
 async function runAI() {
   if (!F) return;
   const key = getKey();
-  if (!key) { F.err = 'Add your Anthropic API key in Settings to use AI.'; refreshSheet(); return; }
+  if (!hasAI()) { F.err = cloud.configured ? 'Sign in to use AI scanning.' : 'Add your Anthropic API key in Settings to use AI.'; refreshSheet(); return; }
   if (F.ctl) F.ctl.abort();
   const ctl = new AbortController(); F.ctl = ctl; F.busy = true; F.err = ''; F.started = Date.now();
   stopTimer(); F.timer = setInterval(() => { const el = $('#busyT'); if (el) el.textContent = elapsed(); }, 1000);
   refreshSheet();
   const f = F;
   try {
-    const res = await analyzeFood({ key, blob: f.mode === 'describe' ? null : f.blob, text: f.text, hint: f.hint.trim(), signal: ctl.signal });
+    const args = { key, blob: f.mode === 'describe' ? null : f.blob, text: f.text, hint: f.hint.trim(), signal: ctl.signal };
+    const res = aiViaCloud() ? await analyzeViaCloud(args) : await analyzeFood(args);
     if (F !== f || f.ctl !== ctl) return;
     if (!res.items.length) f.err = (res.note ? res.note + ' ' : '') + 'No food found. Try another photo or describe it instead.';
     else { f.items = res.items; f.note = res.note; f.stage = 'review'; }
@@ -714,7 +830,7 @@ function openExercise(ref, status) {
         h('div', { class: 'grid3' }, durIn('h', '0', 'Hours', 'h'), durIn('m', '45', 'Minutes', 'm'), durIn('s', '0', 'Seconds', 's'))),
       t.dist ? h('label', { class: 'fld' }, 'Distance', h('span', { class: 'in-u' }, h('input', { type: 'number', inputmode: 'decimal', min: 0, step: 0.01, placeholder: U() === 'mi' ? '3.1' : '5', value: V.dist, oninput: e => { V.dist = e.target.value; refreshLive(); } }), h('i', {}, U()))) : null,
       h('div', { class: 'fld' }, 'Calories burned', h('span', { class: 'in-u' }, kcalIn, h('i', {}, 'kcal')), reset),
-      h('label', { class: 'fld' }, 'Notes', h('textarea', { placeholder: 'How it felt, route, sets and reps…', style: 'min-height:72px', oninput: e => { x.notes = e.target.value; } }, x.notes)),
+      h('label', { class: 'fld' }, 'Note (optional)', h('textarea', { maxlength: 300, placeholder: 'e.g. knee felt sore after mile 3', style: 'min-height:64px', oninput: e => { x.notes = e.target.value; } }, x.notes)),
       live,
       h('div', { class: 'row' }, gl, h('span', { class: 'muted', style: 'font-size:12.5px' }, 'Opens Google Calendar with this workout filled in.')),
       h('div', { class: 'sheet-actions sticky-actions' },
@@ -737,6 +853,82 @@ function openExercise(ref, status) {
         } }, 'Delete') : null));
     refreshLive();
   });
+}
+
+/* ================= account (sign-in & sync) ================= */
+const SYNC_TEXT = { local: 'Saved on this device', signedout: 'Not signed in', saving: 'Syncing…', synced: 'Synced', error: "Couldn't sync. Will retry." };
+function renderAccountBtn() {
+  const b = $('#openAccount'); if (!b) return;
+  b.hidden = !cloud.configured;
+  b.dataset.sync = S.user ? S.sync : 'signedout';
+  b.setAttribute('aria-label', S.user ? `Account: ${SYNC_TEXT[S.sync] || 'Synced'}` : 'Sign in');
+}
+let accountBuild = null;
+function openAccount() {
+  const A = { tab: 'in', email: '', pw: '', pw2: '', show: false, busy: false, msg: null };
+  const run = async (fn) => {
+    A.busy = true; A.msg = null; refreshSheet();
+    try { await fn(); } catch (e) { A.msg = { ok: false, text: (e && e.message) || 'Something went wrong. Try again.' }; }
+    A.busy = false; if (dlg.open && sheetBuild === accountBuild) refreshSheet();
+  };
+  const msgEl = () => A.msg ? h('p', { class: A.msg.ok ? 'ok-msg' : 'err', role: 'status' }, A.msg.text) : null;
+  const pwField = (key, label, auto) => h('label', { class: 'fld' }, label,
+    h('input', { type: A.show ? 'text' : 'password', autocomplete: auto, value: A[key], minlength: 6, oninput: e => { A[key] = e.target.value; } }));
+  accountBuild = body => {
+    if (!cloud.configured) {
+      put(body, h('p', { class: 'note' }, "Sign-in isn't set up on this site yet, so your log is saved in this browser only."));
+      return;
+    }
+    if (S.recovery) {
+      put(body,
+        h('p', { class: 'note' }, 'Choose a new password for your account.'),
+        pwField('pw', 'New password', 'new-password'),
+        h('label', { class: 'toggle' }, h('input', { type: 'checkbox', checked: A.show, onchange: e => { A.show = e.target.checked; refreshSheet(); } }), 'Show password'),
+        msgEl(),
+        h('div', { class: 'sheet-actions' }, h('button', { class: 'btn btn-primary btn-wide', type: 'button', disabled: A.busy, onclick: () => run(async () => {
+          if (A.pw.length < 6) throw new Error('Use a password with at least 6 characters.');
+          await cloud.setPassword(A.pw); S.recovery = false; A.pw = ''; A.msg = { ok: true, text: 'Password updated. You are signed in.' };
+        }) }, A.busy ? 'Saving…' : 'Save new password')));
+      return;
+    }
+    if (S.user) {
+      put(body,
+        h('div', { class: 'acct-card' },
+          h('span', { class: 'acct-av', 'aria-hidden': 'true' }, (S.user.email || '?').slice(0, 1).toUpperCase()),
+          h('div', {}, h('b', {}, S.user.email || 'Signed in'), h('span', { class: 'acct-st', 'data-sync': S.sync }, SYNC_TEXT[S.sync] || 'Synced',
+            S.lastSync && S.sync === 'synced' ? ` · ${new Date(S.lastSync).toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' })}` : ''))),
+        h('p', { class: 'note' }, 'Your meals, workouts, goals and personal notes sync to your own private database, so they show up on any device you sign in on. AI food scanning runs through your account.'),
+        msgEl(),
+        h('div', { class: 'sheet-actions' },
+          h('button', { class: 'btn btn-ghost', type: 'button', disabled: S.sync === 'saving', onclick: () => syncNow() }, icon('sync', 16), 'Sync now'),
+          h('button', { class: 'btn btn-ghost', type: 'button', onclick: () => run(async () => { await cloud.signOut(); closeSheet(); toast('Signed out. Your log stays on this device.'); }) }, 'Sign out')));
+      return;
+    }
+    const isUp = A.tab === 'up';
+    put(body,
+      seg([['in', 'Sign in'], ['up', 'Create account']], A.tab, v => { A.tab = v; A.msg = null; refreshSheet(); }, 'Account'),
+      h('p', { class: 'note' }, isUp ? 'Create your account once. Your log then syncs to your private database and AI food scanning turns on.' : 'Sign in to sync your log across devices and use AI food scanning.'),
+      h('label', { class: 'fld' }, 'Email', h('input', { type: 'email', autocomplete: 'email', inputmode: 'email', value: A.email, oninput: e => { A.email = e.target.value.trim(); } })),
+      pwField('pw', 'Password', isUp ? 'new-password' : 'current-password'),
+      h('label', { class: 'toggle' }, h('input', { type: 'checkbox', checked: A.show, onchange: e => { A.show = e.target.checked; refreshSheet(); } }), 'Show password'),
+      msgEl(),
+      h('div', { class: 'sheet-actions' }, h('button', { class: 'btn btn-primary btn-wide', type: 'button', disabled: A.busy, onclick: () => run(async () => {
+        if (!/^\S+@\S+\.\S+$/.test(A.email)) throw new Error('Enter your email address.');
+        if (A.pw.length < 6) throw new Error('Use a password with at least 6 characters.');
+        if (isUp) {
+          const r = await cloud.signUp(A.email, A.pw);
+          A.msg = r.needsConfirm ? { ok: true, text: 'Check your email and tap the confirmation link, then come back here and sign in.' } : { ok: true, text: 'Account created. You are signed in.' };
+          if (r.needsConfirm) A.tab = 'in';
+        } else {
+          await cloud.signIn(A.email, A.pw); A.pw = ''; closeSheet(); toast('Signed in. Syncing your log…');
+        }
+      }) }, A.busy ? 'One moment…' : isUp ? 'Create account' : 'Sign in')),
+      !isUp ? h('button', { class: 'link-btn', type: 'button', style: 'align-self:flex-start;font-size:13.5px', onclick: () => run(async () => {
+        if (!/^\S+@\S+\.\S+$/.test(A.email)) throw new Error('Type your email above first, then tap "Forgot password?" again.');
+        await cloud.sendReset(A.email); A.msg = { ok: true, text: 'Check your email for a link to set a new password.' };
+      }) }, 'Forgot password?') : null);
+  };
+  openSheet('Account', accountBuild);
 }
 
 /* ================= settings ================= */
@@ -762,7 +954,10 @@ function openSettings(focus) {
       else keyMsg = { ok: false, text: r.message + ' The key was not saved.' };
       if (dlg.open) refreshSheet();
     } }, 'Save key');
-    const aiSection = h('section', { class: 'fld', style: 'gap:10px' },
+    const aiSection = cloud.configured ? h('section', { class: 'fld', style: 'gap:10px' },
+      h('p', { class: 'grp-l' }, 'AI food scanning'),
+      h('p', { class: 'note' }, S.user ? [h('b', {}, 'On. '), 'Scanning runs through your account, so there is no key to manage on this device.'] : [h('b', {}, 'Off. '), 'Sign in to turn on AI scanning.']),
+      h('div', { class: 'row' }, h('button', { class: 'btn btn-ghost btn-sm', type: 'button', onclick: () => openAccount() }, icon('user', 15), S.user ? 'Account' : 'Sign in'))) : h('section', { class: 'fld', style: 'gap:10px' },
       h('p', { class: 'grp-l' }, 'AI food scanning'),
       h('p', { class: 'note' }, hasKey ? h('b', {}, 'On. ') : h('b', {}, 'Off. '), 'Scanning uses Claude through your own Anthropic API key. Get one at ',
         h('a', { href: 'https://console.anthropic.com/settings/keys', target: '_blank', rel: 'noopener' }, 'console.anthropic.com'), ' (API Keys). The key is saved only in this browser on this device and is sent only to Anthropic when you scan. Each scan costs a few cents on your Anthropic account.'),
@@ -793,7 +988,7 @@ function openSettings(focus) {
         h('span', {}, h('b', {}, 'Add exercise calories to my daily budget'), h('br'), h('span', { class: 'muted' }, 'Burned calories are estimated from your body weight. You can change them on any workout.'))),
       focus !== 'ai' ? aiSection : null,
       h('p', { class: 'grp-l' }, 'Your data'),
-      h('p', { class: 'note' }, 'Your log is saved in this browser on this device. Download a backup to keep it safe or move it to another device. Backups never include your API key.'),
+      h('p', { class: 'note' }, S.user ? 'Your log syncs to your account and is also kept on this device. You can download a backup any time.' : 'Your log is saved in this browser on this device. Download a backup to keep it safe or move it to another device. Backups never include your API key.'),
       h('div', { class: 'row' },
         h('button', { class: 'btn btn-ghost btn-sm', type: 'button', onclick: exportBackup }, 'Download backup'),
         h('label', { class: 'btn btn-ghost btn-sm' }, 'Import backup', importIn),
@@ -823,9 +1018,11 @@ $('#goToday').addEventListener('click', () => selectDate(todayISO()));
 $('#viewWeek').addEventListener('click', () => setView('week'));
 $('#viewMonth').addEventListener('click', () => setView('month'));
 $('#openSettings').addEventListener('click', () => openSettings());
+$('#openAccount').addEventListener('click', () => openAccount());
 $('#fab').addEventListener('click', () => { fromFab = true; openAddMenu(); });
 window.addEventListener('storage', e => { if (e.key === LS) { S.days = {}; load(); render(); } });
-document.addEventListener('visibilitychange', () => { if (!document.hidden) renderDate(); });
+document.addEventListener('visibilitychange', () => { if (!document.hidden) { renderDate(); if (S.user && Date.now() - S.lastSync > 60000) syncNow(); } });
 
 load();
 render();
+initCloud();

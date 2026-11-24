@@ -6,12 +6,13 @@
   <meta name="color-scheme" content="light">
   <meta name="theme-color" content="#ffffff">
   <meta name="description" content="Personal notes: Dos Santos Jesus.">
-  <title>Personal Notes · Dos Santos Jesus</title>
+  <title>Personal Notes · DSJ</title>
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%230f1012'/%3E%3Ctext x='32' y='42' font-family='Arial Narrow,Arial,sans-serif' font-size='26' font-weight='700' text-anchor='middle' fill='%23ffffff'%3EDSJ%3C/text%3E%3C/svg%3E">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,400..900&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,400..900&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap">
   <link rel="stylesheet" href="../assets/site.css">
+  <link rel="stylesheet" href="../assets/tracker.css">
 </head>
 <body data-root="../" data-page="notes">
   <button class="menu-btn" type="button" aria-expanded="false" aria-controls="menu" aria-label="Open menu">
@@ -20,17 +21,26 @@
   <div class="scrim" aria-hidden="true"></div>
   <nav class="drawer" id="menu" aria-label="Main menu"></nav>
 
-  <div class="page">
-    <header class="bar">
-      <a class="mark" href="../" aria-label="Dos Santos Jesus, home">DSJ</a>
-      <span class="stamp">Wk <b data-week>48</b> · Day <b data-day>327</b></span>
-    </header>
+  <div class="page tracker">
+    <div class="tk-bar">
+      <header class="bar">
+        <div class="tk-title"><a class="mark" href="../" aria-label="DSJ, home">DSJ</a><span>Notes</span></div>
+        <a class="btn btn-ghost btn-sm" href="../tracking/">Start Tracking</a>
+      </header>
+    </div>
 
-    <main class="blank">
-      <p class="eyebrow"><span class="live-dot" aria-hidden="true"></span><time data-today>Today</time></p>
-      <h1 class="blank-title">Personal Notes</h1>
+    <main class="tk notes-wrap">
+      <div class="notes-head">
+        <p class="eyebrow"><span class="live-dot" aria-hidden="true"></span><time data-today>Today</time></p>
+        <h1>Personal Notes</h1>
+        <p class="notes-status" id="notesStatus" aria-live="polite"></p>
+      </div>
+      <div id="notesApp"></div>
     </main>
   </div>
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+
   <script src="../assets/site.js"></script>
+  <script type="module" src="../assets/notes.js"></script>
 </body>
 </html>
